@@ -1,7 +1,7 @@
 ## Introduction
 ZFScripting is a scripting build by Python for logging in Zhengfang system.
 
-## Dependency
+## Dependencies
 * request
 
 ## Usage
