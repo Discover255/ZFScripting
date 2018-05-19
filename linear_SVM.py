@@ -60,8 +60,8 @@ def getVIEWSATE(html):
     return soup.find(attrs={"name": "__VIEWSTATE"}).get("value")
 
 def test(num):
-    username = "20153201034"
-    password = "ygv369ok"
+    username = "2015"
+    password = ""
     count = 0
     with open("W.dump", "rb") as f:
         Wt = pickle.load(f)
@@ -99,6 +99,6 @@ def test(num):
 
 
 if (__name__ == "__main__"):
-    #train(X, Y)
-    #save(W)
-    test(20)
+    train(X, Y)
+    save(W)
+    #test(20)
