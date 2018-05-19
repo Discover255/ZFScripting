@@ -11,13 +11,17 @@ sumData = sumData * 4
 X = np.zeros((sumData, 21*12))
 Y = np.zeros((sumData, 1), dtype=int)
 mapdict = dict()
-for i in range(ord("0"), ord("9")):
+for i in range(ord("0"), ord("9")+1):
     mapdict[chr(i)] = i - 48
-for i in range(ord("a"), ord("z")):
+for i in range(ord("a"), ord("z")+1):
     mapdict[chr(i)] = i - 97 + 10
+
 
 m = 3
 n = 2
+
+def getKey(value):
+    return list(mapdict.keys())[list(mapdict.values()).index(value)]
 
 def median(col):
     return np.sort(col)[int(m*n/2)]
@@ -65,5 +69,4 @@ for i in range(int(sumData/4)) :
     label = cursor.fetchall()[0][0]
     for j in range(4):
         Y[i*4+j] = mapdict[label[j]]
-print("ok")
-print(sumData)
+print("ok, and number of data is "+str(sumData))
