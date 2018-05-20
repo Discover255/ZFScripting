@@ -5,12 +5,13 @@ ZFScripting is a scripting build by Python for logging in Zhengfang system.
 * request
 
 ## Usage
-### 1. capture CAPTCHA
-run
-```bash
-python get_checkcode.py
-```
-under the images folder
+### 1. Label the images
+run the ```InputLabel.py``` and then open ```http://127.0.0.1:5000``` in your Browser. The label you input will store in ```label.db``` and images in ```./images/```
+### 2. Convert them to train data
+run the ```DataTool.py```, the images will be filter for noice reduction and each of them will be divided into 4 parts. Then each of part is reshaped into 1-D numpy array. Finally put them in X that is a 2-D numpy array. The labels you input which stored in ```label.db``` will be divided into 4 parts as well and mapped to integers range from 0 to 35, stored in Y, a 1-D numpy array.
+
+### 3. Train the model
+
 
 ## Versions in the future
 |Version|things to do|
