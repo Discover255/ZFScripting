@@ -36,8 +36,12 @@ if (__name__ == "__main__"):
 
 @app.route('/')
 def mainpage():
-    with open("input.html", "rb") as f:
-        return f.read()
+    if (count>MAXSIZE):
+        with open("error.html", "rb") as f:
+            return f.read()
+    else:
+        with open("input.html", "rb") as f:
+            return f.read()
 
 @app.route("/image")
 def showImg():
@@ -47,25 +51,20 @@ def showImg():
 @app.route("/save", methods=["POST"])
 def save():
     label = request.form["label"]
-    global pic
-    global MAXSIZE, count, cursor, conn
-    with open("images/"+str(count)+".gif", "wb") as f:
-        print("storing image "+str(count))
-        f.write(pic)
-    print("getting image")
-    pic = requests.get(URL).content
-    cursor.execute("INSERT INTO main (ind, label) VALUES (\'"+str(count)+"\', \'"+label+"\')")
-    conn.commit()
-    if (count < MAXSIZE):
+
+    #这一段是保存label和图片，并重新获取图片
+    global pic, count
+    global MAXSIZE, cursor, conn
+
+    if (count <= MAXSIZE):
+        with open("images/"+str(count)+".gif", "wb") as f:
+            print("storing image "+str(count))
+            f.write(pic)
+        print("getting image")
+        pic = requests.get(URL).content
+        cursor.execute("INSERT INTO main (ind, label) VALUES (\'"+str(count)+"\', \'"+label+"\')")
+        conn.commit()
         count += 1
-        print("go on ,and count is "+str(count))
-    else:
-        print("closing SQLite connection...")
-        cursor.close()
-        conn.close()
-        sys.exit(0)
-        #否则返回退出退出页面
     return redirect("/", code=302)
-    #存储进Y，并重新爬取
 if (__name__ == "__main__"):
     app.run()

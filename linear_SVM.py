@@ -7,9 +7,9 @@ from PIL import Image
 import io
 from bs4 import BeautifulSoup
 import time
+import SessionManager
 
-X = DataTool.X
-Y = DataTool.Y
+X, Y = DataTool.getXY()
 imgSize = 21*12
 sumData = DataTool.sumData
 W = np.random.rand(imgSize+1, 36)*0.0001
@@ -17,13 +17,13 @@ X = np.concatenate((X, np.ones((X.shape[0], 1))), axis=1)
 delta = 5
 L = 0.0001
 alpha = 0.00002
-URL = "https://jwc.scnu.edu.cn/CheckCode.aspx"
 
-def save(W):
-    with open("W.dump", "wb") as f:
+def save(W, name="W.dump"):
+    with open(name, "wb") as f:
         pickle.dump(W, f)
 
-def train(X, Y):
+#这是循环实现的
+def train_naive(X, Y):
     ac = np.zeros(sumData)
     global W
     while (np.sum(ac)*100/sumData) <= 99.0:
@@ -43,7 +43,7 @@ def train(X, Y):
                     loss += float(margin)
                     dz[j] = 1
                     dW[:, j] += X[i]
-                    dW[:,int(Y[i])] = (-X[i])
+                    dW[:,int(Y[i])] += (-X[i]) #之前忘了带加号
             
 
         loss /= sumData
@@ -55,52 +55,72 @@ def train(X, Y):
         dW += L * W
         W -= alpha * dW
 
-def getVIEWSATE(html):
-    soup = BeautifulSoup(html)
-    return soup.find(attrs={"name": "__VIEWSTATE"}).get("value")
+#向量实现的
+def train_vectorized(X, Y):
 
-def test(num):
-    username = ""
-    password = ""
+    """
+    Structured SVM loss function, vectorized implementation.
+    Inputs and outputs are the same as svm_loss_naive.
+    """
+    loss = 0.0
+    dW = np.zeros(W.shape) # initialize the gradient as zero
+    num_train=X.shape[0]
+    num_classes = W.shape[1]
+
+    #这里是numpy的一个feature，可以让(h1, w1) dot (h2, w2)得到(h2, w1)
+    #具体应该是(h2, w2)拆分成一个个(w2)向量，(w2) dot (h1, w1)就得到一个(w1)向量
+    #这些向量叠加h2次，就成了(h2, w1)的矩阵
+    #所以这里是m个样本的score构成的矩阵
+    scores = np.dot(X, W)
+    #这里得到一个500*10的矩阵,表示500个image的ground truth
+    #分了两步，先得到了m*1的矩阵
+    correct_class_score = scores[np.arange(num_train),Y]
+    #重复10次,得到500*10的矩阵,才可以和scores相加相减
+    correct_class_score = np.reshape(np.repeat(correct_class_score,num_classes),(num_train,num_classes))
+    margin = scores-correct_class_score+delta
+    margin[np.arange(num_train),Y]=0
+
+    loss = (np.sum(margin[margin > 0]))/num_train
+    loss+=L*np.sum(W*W)
+
+    #gradient
+    margin[margin>0]=1
+    margin[margin<=0]=0
+
+    row_sum = np.sum(margin, axis=1)                  # 1 by N
+    margin[np.arange(num_train), Y] = -row_sum
+    dW += np.dot(X.T, margin)     # D by C
+    dW/=num_train
+    dW += L * W
+    return loss, dW
+
+def train_loop(times):
+    global W
+    for i in range(times):
+        loss, dW = train_vectorized(X, Y)
+        W -= alpha * dW
+    print("Train finished")
+    save(W, name="W.vetorized.dump")
+
+
+def test(num, Wname="W.dump"):
     count = 0
-    with open("W.dump", "rb") as f:
+    with open(Wname, "rb") as f:
         Wt = pickle.load(f)
     for i in range(num):
-        session = requests.session()
-        page = session.get("https://jwc.scnu.edu.cn/").content
-        time_before = time.time()
-        pic = session.get(URL).content
-        img = Image.open(io.BytesIO(pic))
-        sub = DataTool.preProc(img)
-        sub = np.concatenate((sub, np.ones((4, 1), dtype=np.uint8)), axis=1)
-        code = ""
-        for j in sub:
-            y = np.argmax(np.dot(Wt.T, j))
-            code = code + DataTool.getKey(y)
-        time_after = time.time()
-        VIEWSTATE = getVIEWSATE(page)
-        formData = {"__VIEWSTATE": VIEWSTATE, 
-                    "txtUserName": username, 
-                    "Textbox1":    "",
-                    "TextBox2":    password, 
-                    "txtSecretCode":code, 
-                    "RadioButtonList1": "学生", 
-                    "Button1": "", 
-                    "lbLanguage": "", 
-                    "hidPdrs": "", 
-                    "hidsc": "", 
-        }
-        login = session.post("https://jwc.scnu.edu.cn/default2.aspx", data=formData)
-        if (BeautifulSoup(login.content).title.text == "正方教务管理系统"):
-            print("success ,label is "+code)
+        session = SessionManager.SessionManager()
+        res = session.tryOnce()
+        if (res):
+            print("success")
             count += 1
         else:
-            print("failed ,label is "+code)
-        print("accuracy: %.3f" % float(count*100/(i+1)) + "%" +" recognized in %.5f" % (time_after-time_before) +" s")
+            print("failed")
+        print("accuracy: %.3f" % float(count*100/(i+1)) + "%")
         time.sleep(3)
 
 
 if (__name__ == "__main__"):
-    # train(X, Y)
+    # train_naive(X, Y)
     # save(W)
-    test(100)
+    train_loop(3000000)
+    test(50, Wname="W.vetorized.dump")
