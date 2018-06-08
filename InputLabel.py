@@ -11,7 +11,7 @@ if (__name__ == "__main__"):
     conn = sqlite3.connect("label.db")
     cursor = conn.cursor()
 
-    MAXSIZE = 300
+    MAXSIZE = 600
     print("getting image")
     pic = requests.get(URL).content#初始化如果能用XML配置文件就最好了
     def int_handler(signum, frame):

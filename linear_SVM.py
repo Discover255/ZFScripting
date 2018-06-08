@@ -8,6 +8,7 @@ import io
 from bs4 import BeautifulSoup
 import time
 import SessionManager
+import datetime
 
 X, Y = DataTool.getXY()
 imgSize = 21*12
@@ -94,13 +95,14 @@ def train_vectorized(X, Y):
     dW += L * W
     return loss, dW
 
-def train_loop(times):
+def train_loop(times, name="W.dump"):
     global W
+    print("Start training at " + datetime.datetime.now().ctime())
     for i in range(times):
         loss, dW = train_vectorized(X, Y)
         W -= alpha * dW
     print("Train finished")
-    save(W, name="W.vetorized.dump")
+    save(W, name=name)
 
 
 def test(num, Wname="W.dump"):
@@ -116,11 +118,11 @@ def test(num, Wname="W.dump"):
         else:
             print("failed")
         print("accuracy: %.3f" % float(count*100/(i+1)) + "%")
-        time.sleep(3)
+        time.sleep(2)
 
 
 if (__name__ == "__main__"):
     # train_naive(X, Y)
     # save(W)
-    train_loop(3000000)
-    test(50, Wname="W.vetorized.dump")
+    # train_loop(3000000, name="W.vetorized.dump")
+    test(100, Wname="W.vetorized.dump")
